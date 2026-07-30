@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Expense Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #E8E1CC;
+    --paper-card: #F1EBD9;
+    --ink: #22283B;
+    --ink-soft: #565B6E;
+    --line: #C8BE9F;
+    --expense: #B23A17;
+    --expense-soft: #E7D3C6;
+    --income: #2F6B4F;
+    --income-soft: #D6E2D6;
+    --stamp: #B23A17;
+    --gold: #A9822F;
+    --radius: 6px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--paper) 0%, var(--paper) 100%);
+    font-family:'Inter', sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    padding:32px 16px 64px;
+  }
+  .wrap{max-width:1040px;margin:0 auto;}
+
+  header.masthead{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:3px double var(--ink);
+    padding-bottom:14px;
+    margin-bottom:28px;
+  }
+  header.masthead h1{
+    font-family:'Zilla Slab', serif;
+    font-weight:700;
+    font-size:34px;
+    letter-spacing:0.3px;
+    margin:0;
+  }
+  header.masthead .sub{
+    font-family:'Space Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:1.5px;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 300px 1fr;
+    gap:24px;
+    align-items:start;
+  }
+  @media (max-width:760px){
+    .grid{grid-template-columns:1fr;}
+  }
+
+  /* ---- Slip / entry form ---- */
+  .slip{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px 20px 26px;
+    position:relative;
+  }
+  .slip::before{
+    content:"";
+    position:absolute;
+    top:-1px; left:0; right:0;
+    height:10px;
+    background:
+      radial-gradient(circle at 8px 0, transparent 5px, var(--paper) 5.5px) 0 -5px / 16px 10px repeat-x;
+  }
+  .slip h2{
+    font-family:'Zilla Slab', serif;
+    font-size:17px;
+    margin:6px 0 18px;
+    text-align:center;
+    letter-spacing:0.5px;
+  }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--ink-soft);
+    margin-bottom:5px;
+    font-weight:600;
+  }
+  .field input, .field select{
+    width:100%;
+    font-family:'Space Mono', monospace;
+    font-size:14px;
+    padding:8px 9px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    background:#FBF8EF;
+    color:var(--ink);
+  }
+  .field input:focus, .field select:focus{
+    outline:2px solid var(--gold);
+    outline-offset:1px;
+  }
+  .type-toggle{
+    display:flex;
+    border:1px solid var(--line);
+    border-radius:4px;
+    overflow:hidden;
+    margin-bottom:16px;
+  }
+  .type-toggle button{
+    flex:1;
+    padding:9px 0;
+    border:none;
+    background:#FBF8EF;
+    font-family:'Space Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .type-toggle button.active[data-type="expense"]{
+    background:var(--expense); color:#fff;
+  }
+  .type-toggle button.active[data-type="income"]{
+    background:var(--income); color:#fff;
+  }
+  .add-btn{
+    width:100%;
+    padding:11px 0;
+    background:var(--ink);
+    color:#F1EBD9;
+    border:none;
+    border-radius:4px;
+    font-family:'Zilla Slab', serif;
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:0.5px;
+    cursor:pointer;
+    margin-top:4px;
+  }
+  .add-btn:hover{background:#343c56;}
+
+  /* ---- Totals strip ---- */
+  .totals{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+    margin-bottom:22px;
+  }
+  .total-card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px 16px;
+  }
+  .total-card .label{
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:1.2px;
+    color:var(--ink-soft);
+    font-weight:600;
+  }
+  .total-card .value{
+    font-family:'Space Mono', monospace;
+    font-size:22px;
+    font-weight:700;
+    margin-top:4px;
+  }
+  .total-card.balance .value{color:var(--ink);}
+  .total-card.income .value{color:var(--income);}
+  .total-card.expense .value{color:var(--expense);}
+
+  /* ---- Category tally ---- */
+  .tally{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 18px 18px;
+    margin-bottom:22px;
+  }
+  .tally h3{
+    font-family:'Zilla Slab', serif;
+    font-size:14px;
+    margin:0 0 12px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--ink-soft);
+  }
+  .tally-row{
+    display:grid;
+    grid-template-columns:110px 1fr 70px;
+    align-items:center;
+    gap:10px;
+    margin-bottom:8px;
+    font-size:12px;
+  }
+  .tally-row .cat-name{font-family:'Space Mono',monospace;}
+  .tally-bar-track{
+    height:8px;
+    background:#DDD4B7;
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .tally-bar-fill{
+    height:100%;
+    background:var(--expense);
+    border-radius:4px;
+  }
+  .tally-row .cat-amt{
+    font-family:'Space Mono', monospace;
+    text-align:right;
+  }
+  .tally-empty{font-size:12px; color:var(--ink-soft); font-style:italic;}
+
+  /* ---- Ledger table ---- */
+  .ledger{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .ledger-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 18px;
+    border-bottom:2px solid var(--ink);
+  }
+  .ledger-head h3{
+    font-family:'Zilla Slab', serif;
+    font-size:16px;
+    margin:0;
+  }
+  .filter-select{
+    font-family:'Space Mono', monospace;
+    font-size:11px;
+    padding:5px 8px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    background:#FBF8EF;
+  }
+  table{width:100%; border-collapse:collapse;}
+  thead th{
+    text-align:left;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--ink-soft);
+    padding:10px 18px;
+    border-bottom:1px solid var(--line);
+    font-weight:600;
+  }
+  thead th.num{text-align:right;}
+  tbody td{
+    padding:11px 18px;
+    border-bottom:1px dashed var(--line);
+    font-size:13px;
+    vertical-align:middle;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody td.desc{font-weight:500;}
+  tbody td.cat{
+    font-family:'Space Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  tbody td.date{
+    font-family:'Space Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  tbody td.amt{
+    font-family:'Space Mono', monospace;
+    text-align:right;
+    font-weight:700;
+    white-space:nowrap;
+  }
+  tbody td.amt.expense{color:var(--expense);}
+  tbody td.amt.income{color:var(--income);}
+  tbody td.del{text-align:right; width:36px;}
+  .del-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--ink-soft);
+    font-size:15px;
+    line-height:1;
+    padding:4px;
+  }
+  .del-btn:hover{color:var(--expense);}
+  .empty-row td{
+    text-align:center;
+    padding:36px 18px;
+    color:var(--ink-soft);
+    font-style:italic;
+    font-size:13px;
+  }
+  .sr-only{
+    position:absolute; width:1px; height:1px;
+    padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <h1>The Ledger</h1>
+    <span class="sub">Personal account book</span>
+  </header>
+
+  <h2 class="sr-only">Expense tracker: log income and expenses, see totals and a category breakdown, and browse your entries in a ledger table.</h2>
+
+  <div class="grid">
+
+    <!-- Entry slip -->
+    <div class="slip">
+      <h2>New entry</h2>
+
+      <div class="type-toggle" id="typeToggle">
+        <button type="button" data-type="expense" class="active">Expense</button>
+        <button type="button" data-type="income">Income</button>
+      </div>
+
+      <div class="field">
+        <label for="descInput">Description</label>
+        <input id="descInput" type="text" placeholder="Coffee, rent, freelance..." />
+      </div>
+
+      <div class="field">
+        <label for="amtInput">Amount</label>
+        <input id="amtInput" type="number" min="0" step="0.01" placeholder="0.00" />
+      </div>
+
+      <div class="field">
+        <label for="catInput">Category</label>
+        <select id="catInput">
+          <option>Food</option>
+          <option>Transport</option>
+          <option>Housing</option>
+          <option>Utilities</option>
+          <option>Shopping</option>
+          <option>Health</option>
+          <option>Entertainment</option>
+          <option>Salary</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="dateInput">Date</label>
+        <input id="dateInput" type="date" />
+      </div>
+
+      <button class="add-btn" id="addBtn">Add to ledger</button>
+    </div>
+
+    <!-- Main -->
+    <div>
+      <div class="totals">
+        <div class="total-card balance">
+          <div class="label">Balance</div>
+          <div class="value" id="balanceVal">$0.00</div>
+        </div>
+        <div class="total-card income">
+          <div class="label">Income</div>
+          <div class="value" id="incomeVal">$0.00</div>
+        </div>
+        <div class="total-card expense">
+          <div class="label">Expenses</div>
+          <div class="value" id="expenseVal">$0.00</div>
+        </div>
+      </div>
+
+      <div class="tally">
+        <h3>Spending by category</h3>
+        <div id="tallyBody"></div>
+      </div>
+
+      <div class="ledger">
+        <div class="ledger-head">
+          <h3>Entries</h3>
+          <select class="filter-select" id="filterSelect" aria-label="Filter entries">
+            <option value="all">All entries</option>
+            <option value="income">Income only</option>
+            <option value="expense">Expenses only</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th class="num">Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="entriesBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let entries = [];
+let currentType = 'expense';
+let filter = 'all';
+const STORAGE_KEY = 'ledger:entries';
+
+const typeToggle = document.getElementById('typeToggle');
+const descInput = document.getElementById('descInput');
+const amtInput = document.getElementById('amtInput');
+const catInput = document.getElementById('catInput');
+const dateInput = document.getElementById('dateInput');
+const addBtn = document.getElementById('addBtn');
+const filterSelect = document.getElementById('filterSelect');
+const entriesBody = document.getElementById('entriesBody');
+const tallyBody = document.getElementById('tallyBody');
+const balanceVal = document.getElementById('balanceVal');
+const incomeVal = document.getElementById('incomeVal');
+const expenseVal = document.getElementById('expenseVal');
+
+dateInput.valueAsDate = new Date();
+
+typeToggle.addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  currentType = btn.dataset.type;
+  [...typeToggle.children].forEach(b => b.classList.toggle('active', b === btn));
+});
+
+filterSelect.addEventListener('change', () => {
+  filter = filterSelect.value;
+  render();
+});
+
+function fmt(n){
+  return '$' + Number(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+async function loadEntries(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    entries = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    entries = [];
+  }
+  render();
+}
+
+async function saveEntries(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(entries), false);
+  }catch(e){
+    console.error('Could not save entries', e);
+  }
+}
+
+addBtn.addEventListener('click', async () => {
+  const desc = descInput.value.trim();
+  const amt = parseFloat(amtInput.value);
+  const cat = catInput.value;
+  const date = dateInput.value || new Date().toISOString().slice(0,10);
+
+  if(!desc){ descInput.focus(); return; }
+  if(!amt || amt <= 0){ amtInput.focus(); return; }
+
+  entries.unshift({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    type: currentType,
+    desc, amount: amt, category: cat, date
+  });
+
+  descInput.value = '';
+  amtInput.value = '';
+  descInput.focus();
+
+  await saveEntries();
+  render();
+});
+
+entriesBody.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.del-btn');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  entries = entries.filter(en => en.id !== id);
+  await saveEntries();
+  render();
+});
+
+function render(){
+  const income = entries.filter(e => e.type === 'income').reduce((s,e) => s + e.amount, 0);
+  const expense = entries.filter(e => e.type === 'expense').reduce((s,e) => s + e.amount, 0);
+  balanceVal.textContent = fmt(income - expense);
+  incomeVal.textContent = fmt(income);
+  expenseVal.textContent = fmt(expense);
+
+  const byCat = {};
+  entries.filter(e => e.type === 'expense').forEach(e => {
+    byCat[e.category] = (byCat[e.category] || 0) + e.amount;
+  });
+  const maxCat = Math.max(1, ...Object.values(byCat));
+  tallyBody.innerHTML = '';
+  const catEntries = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
+  if(catEntries.length === 0){
+    tallyBody.innerHTML = '<div class="tally-empty">No expenses logged yet.</div>';
+  }else{
+    catEntries.forEach(([cat, amt]) => {
+      const row = document.createElement('div');
+      row.className = 'tally-row';
+      row.innerHTML = `
+        <span class="cat-name">${cat}</span>
+        <span class="tally-bar-track"><span class="tally-bar-fill" style="width:${(amt/maxCat*100).toFixed(0)}%"></span></span>
+        <span class="cat-amt">${fmt(amt)}</span>
+      `;
+      tallyBody.appendChild(row);
+    });
+  }
+
+  const visible = entries.filter(e => filter === 'all' ? true : e.type === filter);
+  entriesBody.innerHTML = '';
+  if(visible.length === 0){
+    entriesBody.innerHTML = '<tr class="empty-row"><td colspan="5">No entries yet — add your first one on the left.</td></tr>';
+    return;
+  }
+  visible.forEach(en => {
+    const tr = document.createElement('tr');
+    const sign = en.type === 'income' ? '+' : '−';
+    tr.innerHTML = `
+      <td class="date">${en.date}</td>
+      <td class="desc">${escapeHtml(en.desc)}</td>
+      <td class="cat">${en.category}</td>
+      <td class="amt ${en.type}">${sign}${fmt(en.amount)}</td>
+      <td class="del"><button class="del-btn" data-id="${en.id}" aria-label="Delete entry">×</button></td>
+    `;
+    entriesBody.appendChild(tr);
+  });
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+loadEntries();
+</script>
+</body>
+</html>

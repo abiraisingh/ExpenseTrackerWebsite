@@ -34,3 +34,9 @@ Copy `.env.example` to `.env` to configure `PORT`, `HOST`, `DATA_DIR`, or `CORS_
 - `DELETE /api/transactions/:id` removes a transaction.
 
 The JSON store is intentionally simple and appropriate for a personal, single-process app. A multi-user deployment should replace it with a database and authentication layer.
+
+## Deploy on Render
+
+The repository includes `render.yaml` for a persistent Render web service. In the Render dashboard, choose **New > Blueprint**, connect `abiraisingh/ExpenseTrackerWebsite`, and apply the blueprint. Render will build the frontend, start the Express server, and mount `/var/data` so transactions survive redeploys.
+
+The Blueprint uses Render's Starter plan because persistent disks are required for the JSON data file. For a free deployment, remove the disk and `DATA_DIR`, but data may be lost whenever the service restarts or redeploys.

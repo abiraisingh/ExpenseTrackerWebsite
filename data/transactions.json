@@ -1,0 +1,10 @@
+[
+  {
+    "id": "8b4bfef6-4e20-42e6-aece-861a123b6e31",
+    "description": "Salary",
+    "amount": 50000,
+    "category": "Salary",
+    "date": "2026-09-01",
+    "type": "income"
+  }
+]
